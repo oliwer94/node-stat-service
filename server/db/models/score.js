@@ -9,10 +9,7 @@ var ScoreSchema = new mongoose.Schema(
             minlength: 1,
             unique: true
         },
-        scores: [
-            {
-                score: Number
-            }]
+        scores: []
     });
 
 var Score = mongoose.model("Score", ScoreSchema);

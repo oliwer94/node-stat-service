@@ -14,7 +14,7 @@ var {compareNumbers} = require('./utils/utils');
 
 var PORT = process.env.PORT;
 var app = express();
-var userTokens = [{ token: 'asdojasidjasoofu', id: '12s32df43' }];
+var userTokens = [];
 
 app.use(bodyParser.json());
 app.use(cookieParser());
@@ -42,27 +42,32 @@ app.get('/', (req, res) => {
 
 //GET Scores 
 app.get('/score/:_userId', authenticate, (req, res) => {
-     Score.findById(req.user.id).then((score) => {
-         if (score) {
-             res.send({ score });
-         }
-         else {
-             res.sendStatus(404);
-         }
-     },
-         (e) => {
-             res.sendStatus(400);
-         }
-     );
+
+     if (!ObjectID.isValid(req.params._userId)) {
+        return res.sendStatus(400);
+    }
+
+    Score.findOne({'_userId':req.params._userId}).then((score) => {
+        if (score) {
+            res.send({ score });
+        }
+        else {
+            res.sendStatus(404);
+        }
+    },
+        (e) => {
+            res.sendStatus(400);
+        }
+    );
 });
 
 //GET Stats
 app.get('/stat/:_userId', authenticate, (req, res) => {
-    if (!ObjectID.isValid(req.params.id)) {
+    if (!ObjectID.isValid(req.params._userId)) {
         return res.sendStatus(400);
     }
 
-    Stat.findById(req.params.id).then((stat) => {
+    Stat.findOne({'_userId':req.params._userId}).then((stat) => {
         if (stat) {
             res.send({ stat });
         }
@@ -76,66 +81,91 @@ app.get('/stat/:_userId', authenticate, (req, res) => {
     );
 });
 
+function isUserIncluded(token, id) {
+
+    var user_entries = userTokens.filter((user) => user.token === token && user.id === id);
+
+    if (user_entries.length === 1) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
 app.post('/addUser', (req, res) => {
-    userTokens.push({ id: req.body.id, token: req.body.token });
-    res.send(200);
-    console.log(userTokens);
-    console.log("-------------------------------------");
+    var isIncluded = isUserIncluded(req.body.token, req.body.id);
+
+    if (!isIncluded) {
+        userTokens.push({ id: req.body.id, token: req.body.token });
+
+        res.sendStatus(200);
+    }
+   // console.log(userTokens);
+   // console.log("-------------------------------------");
 });
 
 app.post('/removeUser', (req, res) => {
-    userTokens = userTokens.filter((user) => user.id !== req.body.id && user.token !== req.body.token);
-    res.send(200);
-    console.log(userTokens);
-    console.log("-------------------------------------");
+
+    var isIncluded = isUserIncluded(req.body.token, req.body.id);
+
+    if (isIncluded) {
+        userTokens = userTokens.filter((user) => user.id !== req.body.id && user.token !== req.body.token);
+
+        res.sendStatus(200);
+
+    }
+   // console.log(userTokens);
+   // console.log("-------------------------------------");
+
 });
 
 //Auth needed for the methods from here
 
 //PATCH (UPDATE) - scores
 app.patch('/scores/:_userId', authenticate, (req, res) => {
-    res.send('PATCH SCORES');
-    var id = req.params.id;
+   // res.send('PATCH SCORES');
+    var id = req.params._userId;
     var body = _.pick(req.body, ['_userId', 'score']);
 
     if (!ObjectID.isValid(req.params._userId)) {
         return res.status(400).send("ID is invalid");
     }
 
-    Score.findById(id).then((score) => {
+    Score.findOne({'_userId':id}).then((score) => {
 
         score.scores.push(body.score);
         score.scores.sort(compareNumbers);
 
-        if (score.scores.legnth > 10) {
+        if (score.scores.length > 10) {
             var min = score.scores[9];
             score.scores.filter((sc) => sc >= min);
         }
 
-        Score.findByIdAndUpdate(id, { $set: score }, { new: true }).then((newscore) => {
-            res.send({ newscore });
+        Score.findByIdAndUpdate(score._id, { $set: score }, { new: true }).then((newscore) => {
+            res.status(200).send({ newscore });
         });
     });
 });
 
 //PATCH (UPDATE) - scores
 app.patch('/stats/:_userId', authenticate, (req, res) => {
-    var id = req.params.id;
+    var id = req.params._userId;
     var body = _.pick(req.body, ['statObj']);
 
     if (!ObjectID.isValid(req.params._userId)) {
         return res.status(400).send("ID is invalid");
     }
 
-    Stat.findById(id).then((stat) => {
+    Stat.findOne({'_userId':id}).then((stat) => {
 
-        Object.keys(stat).forEach((key) => {
-            if (key !== '_userId') {
-                stat[key] += body[key];
+        Object.keys(stat._doc).forEach((key) => {
+            if (key !== '_userId' && key !== '_id' && key !== '__v') {
+                stat._doc[key] += body.statObj[key];
             }
         });
 
-        Score.findByIdAndUpdate(id, { $set: stat }, { new: true }).then((newstat) => {
+        Stat.findByIdAndUpdate(stat._id, { $set: stat }, { new: true }).then((newstat) => {
             res.send({ newstat });
         });
     });
