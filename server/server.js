@@ -6,6 +6,7 @@ const {ObjectID} = require('mongodb');
 const _ = require('lodash');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
+var cache = require('persistent-cache');
 
 var {mongoose} = require('./db/mongoose');
 var {Stat} = require('./db/models/stat');
@@ -16,9 +17,26 @@ var PORT = process.env.PORT;
 var app = express();
 var userTokens = [];
 
+var mycache = cache({
+    //duration: 1000 * 3600 * 24 //one day
+    duration: 1000 * 60 * 10 // 10 mins
+});
 app.use(bodyParser.json());
 app.use(cookieParser());
 
+var authenticate = (req, res, next) => {
+    var token = req.cookies.token;
+    var value = mycache.getSync(token);
+    if (value !== undefined) {
+
+        next();
+    }
+    else {
+        res.sendStatus(401);
+    }
+}
+/*
+//silly cache solution
 var authenticate = (req, res, next) => {
     if (req.cookies.token) {
         var user_entry = userTokens.filter(function (user) { return user.token === req.cookies.token })[0];
@@ -32,7 +50,7 @@ var authenticate = (req, res, next) => {
     else {
         res.sendStatus(401);
     }
-}
+}*/
 
 //GET Scores 
 app.get('/', (req, res) => {
@@ -43,11 +61,11 @@ app.get('/', (req, res) => {
 //GET Scores 
 app.get('/score/:_userId', authenticate, (req, res) => {
 
-     if (!ObjectID.isValid(req.params._userId)) {
+    if (!ObjectID.isValid(req.params._userId)) {
         return res.sendStatus(400);
     }
 
-    Score.findOne({'_userId':req.params._userId}).then((score) => {
+    Score.findOne({ '_userId': req.params._userId }).then((score) => {
         if (score) {
             res.send({ score });
         }
@@ -67,7 +85,7 @@ app.get('/stat/:_userId', authenticate, (req, res) => {
         return res.sendStatus(400);
     }
 
-    Stat.findOne({'_userId':req.params._userId}).then((stat) => {
+    Stat.findOne({ '_userId': req.params._userId }).then((stat) => {
         if (stat) {
             res.send({ stat });
         }
@@ -81,6 +99,41 @@ app.get('/stat/:_userId', authenticate, (req, res) => {
     );
 });
 
+app.post('/saveUserToDb', (req, res) => {
+
+    var body = _.pick(req.body, ['_userId']);
+
+    var newStatEntry = new Stat();
+    newStatEntry._userId = body._userId;
+
+    var newScoreEntry = new Score();
+    newScoreEntry._userId = body._userId;
+
+    newStatEntry.save();
+    newScoreEntry.save();
+
+    res.sendStatus(200);
+
+});
+
+app.post('/addUser', (req, res) => {
+
+    mycache.put(req.body.token, { "_userId": req.body.id });
+    res.sendStatus(200);
+    console.log(userTokens);
+    console.log("User has been added to the online list---------------------------");
+
+});
+
+app.post('/removeUser', (req, res) => {
+
+    mycache.deleteSync(req.body.token);
+    res.sendStatus(200);
+    console.log(userTokens);
+    console.log("User has been removed from the online list---------------------------");
+}
+);
+/*
 function isUserIncluded(token, id) {
 
     var user_entries = userTokens.filter((user) => user.token === token && user.id === id);
@@ -100,9 +153,15 @@ app.post('/addUser', (req, res) => {
         userTokens.push({ id: req.body.id, token: req.body.token });
 
         res.sendStatus(200);
+        console.log(userTokens);
+        console.log("User has been added to the online list---------------------------");
     }
-   // console.log(userTokens);
-   // console.log("-------------------------------------");
+    else {
+        res.sendStatus(404);
+        console.log(userTokens);
+        console.log("User not found");
+
+    }
 });
 
 app.post('/removeUser', (req, res) => {
@@ -110,21 +169,29 @@ app.post('/removeUser', (req, res) => {
     var isIncluded = isUserIncluded(req.body.token, req.body.id);
 
     if (isIncluded) {
-        userTokens = userTokens.filter((user) => user.id !== req.body.id && user.token !== req.body.token);
+        userTokens = userTokens.filter((user) =>  user.token !== req.body.token);
 
         res.sendStatus(200);
+        console.log(userTokens);
+        console.log("User has been removed from the online list---------------------------");
+
 
     }
-   // console.log(userTokens);
-   // console.log("-------------------------------------");
+    else {
+        res.sendStatus(404);
+        console.log(userTokens);
+        console.log("User not found");
+    }
 
-});
+
+
+});*/
 
 //Auth needed for the methods from here
 
 //PATCH (UPDATE) - scores
 app.patch('/scores/:_userId', authenticate, (req, res) => {
-   // res.send('PATCH SCORES');
+    // res.send('PATCH SCORES');
     var id = req.params._userId;
     var body = _.pick(req.body, ['_userId', 'score']);
 
@@ -132,7 +199,7 @@ app.patch('/scores/:_userId', authenticate, (req, res) => {
         return res.status(400).send("ID is invalid");
     }
 
-    Score.findOne({'_userId':id}).then((score) => {
+    Score.findOne({ '_userId': id }).then((score) => {
 
         score.scores.push(body.score);
         score.scores.sort(compareNumbers);
@@ -157,9 +224,9 @@ app.patch('/stats/:_userId', authenticate, (req, res) => {
         return res.status(400).send("ID is invalid");
     }
 
-    Stat.findOne({'_userId':id}).then((stat) => {
+    Stat.findOne({ '_userId': id }).then((stat) => {
 
-        Object.keys(stat._doc).forEach((key) => {
+        Object.keys(body.statObj).forEach((key) => {
             if (key !== '_userId' && key !== '_id' && key !== '__v') {
                 stat._doc[key] += body.statObj[key];
             }

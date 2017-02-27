@@ -76,7 +76,7 @@ describe('GET /score/:_userId', () => {
 describe('GET /stat/:_userId', () => {
 
     it('should return user\'s stat', (done) => {
-       request(app)
+        request(app)
             .get(`/stat/${testID}`)
             .set('Cookie', [`token=asdojasidjasoofu`])
             .expect(200)
@@ -114,7 +114,7 @@ describe('PATCH /scores/:_userId', () => {
         request(app)
             .patch(`/scores/${testID}`)
             .set('Cookie', [`token=asdojasidjasoofu`])
-            .send({'_userId':testID,'score':3000})
+            .send({ '_userId': testID, 'score': 3000 })
             .expect(200)
             .expect((res) => {
                 expect(res.body.newscore._userId).toBe(testID.toHexString());
@@ -125,7 +125,7 @@ describe('PATCH /scores/:_userId', () => {
                 }
                 Score.findOne({ '_userId': testID }).then((score) => {
                     expect(score.scores.length).toBe(1);
-                     expect(score.scores[0]).toEqual(3000);
+                    expect(score.scores[0]).toEqual(3000);
                     expect
                     return done();
                 }).catch((e) => done(e));
@@ -149,10 +149,10 @@ describe('PATCH /stat/:_userId', () => {
     it('should update user\'s stats', (done) => {
         var statObj = new Stat();
         statObj.totalSkullCount = 10;
-       request(app)
+        request(app)
             .patch(`/stats/${testID}`)
             .set('Cookie', [`token=asdojasidjasoofu`])
-            .send({'statObj':statObj})
+            .send({ 'statObj': statObj })
             .expect(200)
             .expect((res) => {
                 expect(res.body.newstat._userId).toBe(testID.toHexString());
@@ -162,14 +162,14 @@ describe('PATCH /stat/:_userId', () => {
                     return done(err);
                 }
                 Stat.findOne({ '_userId': testID }).then((stat) => {
-                     expect(stat.totalSkullCount).toBe(10);
+                    expect(stat.totalSkullCount).toBe(10);
                     expect
                     return done();
                 }).catch((e) => done(e));
             });
     });
 
-    it('should return a 401', (done) => {       
+    it('should return a 401', (done) => {
 
         request(app)
             .patch(`/stats/${testID}`)
@@ -179,4 +179,43 @@ describe('PATCH /stat/:_userId', () => {
             })
             .end(done);
     });
+});
+
+
+describe('POST /saveUserToDb', () => {
+
+    it('should create a new stat entry in the db', (done) => {
+
+        request(app)
+            .post(`/saveUserToDb`)
+            .send({ '_userId': new ObjectID() })
+            .expect(200)
+            .end((err) => {
+                if (err) {
+                    return done(err);
+                }
+                Stat.find().then((stats) => {
+                    expect(stats.length).toBe(2);
+                    return done();
+                }).catch((e) => done(e));
+            });
+    });
+
+    it('should create a new score entry in the db', (done) => {
+
+        request(app)
+            .post(`/saveUserToDb`)
+            .send({ '_userId': new ObjectID() })
+            .expect(200)
+           .end((err) => {
+                if (err) {
+                    return done(err);
+                }
+                Score.find().then((scores) => {
+                    expect(scores.length).toBe(2);
+                    return done();
+                }).catch((e) => done(e));
+            });
+    });
+
 });
