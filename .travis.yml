@@ -3,7 +3,7 @@ node_js: "6.6.0"
 
 before_script:
   - npm install
-  - npm mongo -v
+  - mongod --version
   
 services: mongodb
 
