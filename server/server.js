@@ -140,8 +140,8 @@ app.patch('/scores/:_userId', authenticate, (req, res) => {
 
         score.scores.push(body.score);
         score.scores.sort(compareNumbers);
-     //   var idObj = score._id;
-     //   delete score._id;
+        var idObj = score._id;
+        delete score._id;
 
         if (score.scores.length > 10) {
             var min = score.scores[9];
@@ -171,7 +171,10 @@ app.patch('/stats/:_userId', authenticate, (req, res) => {
             }
         });
 
-        Stat.findByIdAndUpdate(stat._id, { $set: stat }, { new: true }).then((newstat) => {
+         var idObj = stat._id;
+        delete stat._id;
+
+        Stat.findByIdAndUpdate(idObj, { $set: stat }, { new: true }).then((newstat) => {
             res.send({ newstat });
         });
     });
