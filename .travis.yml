@@ -6,6 +6,8 @@ install: true  # yarn bug
 before_script:
   - npm install
   
+services: mongodb
+
 branches:
   only: master
 
