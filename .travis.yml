@@ -10,4 +10,5 @@ branches:
   only: master
 
   script:
+  - npm mongo -v
   - npm run test
