@@ -1,0 +1,13 @@
+language: node_js
+node_js: stable
+
+install: true  # yarn bug
+
+before_script:
+  - npm install
+  
+branches:
+  only: master
+
+  script:
+  - npm run test
