@@ -22,7 +22,8 @@
   "scripts": {
     "start": "node server/server.js",
     "test": "export NODE_ENV=test || SET \"NODE_ENV=test\" && mocha server/**/*.test.js",
-    "test-watch": "nodemon --exec 'test'"
+    "test-watch": "nodemon --exec 'test'",
+    "start.local.db":"cd c:/program files/mongodb/server/3.4/bin/  && mongod.exe  --dbpath /users/oliwer/mongo-data"
   },
   "devDependencies": {
     "axios": "^0.15.3",

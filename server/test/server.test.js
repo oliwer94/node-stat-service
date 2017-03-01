@@ -16,17 +16,17 @@ var testStats = seed.testStats;
 
 beforeEach((done) => {
 
-    axios.post('http://localhost:3000/removeUser', {
+    axios.post('http://localhost:3002/removeUser', {
         token: 'asdojasidjasoofu',
         id: testID
     }).catch(function (error) {
-        console.log(error);
+        //  console.log(error);
     });
-    axios.post('http://localhost:3000/adduser', {
+    axios.post('http://localhost:3002/adduser', {
         token: 'asdojasidjasoofu',
         id: testID
     }).catch(function (error) {
-        console.log(error);
+        //console.log(error);
     });
 
     seed.populateStat(done);
@@ -163,7 +163,6 @@ describe('PATCH /stat/:_userId', () => {
                 }
                 Stat.findOne({ '_userId': testID }).then((stat) => {
                     expect(stat.totalSkullCount).toBe(10);
-                    expect
                     return done();
                 }).catch((e) => done(e));
             });
@@ -180,7 +179,6 @@ describe('PATCH /stat/:_userId', () => {
             .end(done);
     });
 });
-
 
 describe('POST /saveUserToDb', () => {
 
@@ -207,7 +205,7 @@ describe('POST /saveUserToDb', () => {
             .post(`/saveUserToDb`)
             .send({ '_userId': new ObjectID() })
             .expect(200)
-           .end((err) => {
+            .end((err) => {
                 if (err) {
                     return done(err);
                 }
@@ -218,4 +216,36 @@ describe('POST /saveUserToDb', () => {
             });
     });
 
+});
+
+describe('POST /addUser and /removeUser', () => {
+
+    it('should add user to the cache', (done) => {
+        var token = "asdjaskdkaoskdopas";
+        var id = new ObjectID();
+        request(app)
+            .post(`/addUser`)
+            .send({ token, id })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.token).toBe(token);
+                expect(res.body.id._userId).toBe(id.toHexString());
+            })
+            .end(done);
+    });
+
+    it('should remove user from the cache', (done) => {
+            var token = "asdjaskdkaoskdopas";
+            var id = new ObjectID();
+
+            request(app)
+                .post('/removeUser')
+                .send({ token })
+                .expect(200)
+                .expect((res) => {
+                    expect(res.body.token).toBe(token);
+                    expect(res.body.id).toBe(undefined);
+                })
+                .end(done);
+    });
 });

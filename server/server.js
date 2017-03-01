@@ -35,22 +35,6 @@ var authenticate = (req, res, next) => {
         res.sendStatus(401);
     }
 }
-/*
-//silly cache solution
-var authenticate = (req, res, next) => {
-    if (req.cookies.token) {
-        var user_entry = userTokens.filter(function (user) { return user.token === req.cookies.token })[0];
-        if (user_entry && _.includes(user_entry, req.cookies.token)) {
-            next();
-        }
-        else {
-            res.sendStatus(401);
-        }
-    }
-    else {
-        res.sendStatus(401);
-    }
-}*/
 
 //GET Scores 
 app.get('/', (req, res) => {
@@ -117,22 +101,103 @@ app.post('/saveUserToDb', (req, res) => {
 });
 
 app.post('/addUser', (req, res) => {
-
-    mycache.put(req.body.token, { "_userId": req.body.id });
+    mycache.putSync(req.body.token, { "_userId": req.body.id });
+    if (process.env.NODE_ENV === "test") {
+        return res.status(200).send({ "token": req.body.token, "id": mycache.getSync(req.body.token) });
+    }
     res.sendStatus(200);
-    console.log(userTokens);
-    console.log("User has been added to the online list---------------------------");
-
 });
 
 app.post('/removeUser', (req, res) => {
 
-    mycache.deleteSync(req.body.token);
-    res.sendStatus(200);
-    console.log(userTokens);
-    console.log("User has been removed from the online list---------------------------");
-}
-);
+    if (mycache.getSync(req.body.token) !== undefined) {
+        mycache.deleteSync(req.body.token);
+        if (process.env.NODE_ENV === "test") {
+            return res.status(200).send({ "token": req.body.token, "id": mycache.getSync(req.body.token) });
+        }
+        res.sendStatus(200);
+    }
+    else
+    {
+        res.sendStatus(404)
+    }
+
+});
+
+//Auth needed for the methods from here
+
+//PATCH (UPDATE) - scores
+app.patch('/scores/:_userId', authenticate, (req, res) => {
+    // res.send('PATCH SCORES');
+    var id = req.params._userId;
+    var body = _.pick(req.body, ['_userId', 'score']);
+
+    if (!ObjectID.isValid(req.params._userId)) {
+        return res.status(400).send("ID is invalid");
+    }
+
+    Score.findOne({ '_userId': id }).then((score) => {
+
+        score.scores.push(body.score);
+        score.scores.sort(compareNumbers);
+
+        if (score.scores.length > 10) {
+            var min = score.scores[9];
+            score.scores.filter((sc) => sc >= min);
+        }
+
+        Score.findByIdAndUpdate(score._id, { $set: score }, { new: true }).then((newscore) => {
+            res.status(200).send({ newscore });
+        });
+    });
+});
+
+//PATCH (UPDATE) - scores
+app.patch('/stats/:_userId', authenticate, (req, res) => {
+    var id = req.params._userId;
+    var body = _.pick(req.body, ['statObj']);
+
+    if (!ObjectID.isValid(req.params._userId)) {
+        return res.status(400).send("ID is invalid");
+    }
+
+    Stat.findOne({ '_userId': id }).then((stat) => {
+
+        Object.keys(body.statObj).forEach((key) => {
+            if (key !== '_userId' && key !== '_id' && key !== '__v') {
+                stat._doc[key] += body.statObj[key];
+            }
+        });
+
+        Stat.findByIdAndUpdate(stat._id, { $set: stat }, { new: true }).then((newstat) => {
+            res.send({ newstat });
+        });
+    });
+});
+
+app.listen(PORT, () => {
+    console.log("Started on port ", PORT);
+});
+
+module.exports = { app };
+
+/*
+//silly cache solution
+var authenticate = (req, res, next) => {
+    if (req.cookies.token) {
+        var user_entry = userTokens.filter(function (user) { return user.token === req.cookies.token })[0];
+        if (user_entry && _.includes(user_entry, req.cookies.token)) {
+            next();
+        }
+        else {
+            res.sendStatus(401);
+        }
+    }
+    else {
+        res.sendStatus(401);
+    }
+}*/
+
 /*
 function isUserIncluded(token, id) {
 
@@ -186,62 +251,3 @@ app.post('/removeUser', (req, res) => {
 
 
 });*/
-
-//Auth needed for the methods from here
-
-//PATCH (UPDATE) - scores
-app.patch('/scores/:_userId', authenticate, (req, res) => {
-    // res.send('PATCH SCORES');
-    var id = req.params._userId;
-    var body = _.pick(req.body, ['_userId', 'score']);
-
-    if (!ObjectID.isValid(req.params._userId)) {
-        return res.status(400).send("ID is invalid");
-    }
-
-    Score.findOne({ '_userId': id }).then((score) => {
-
-        score.scores.push(body.score);
-        score.scores.sort(compareNumbers);
-
-        if (score.scores.length > 10) {
-            var min = score.scores[9];
-            score.scores.filter((sc) => sc >= min);
-        }
-
-        Score.findByIdAndUpdate(score._id, { $set: score }, { new: true }).then((newscore) => {
-            res.status(200).send({ newscore });
-        });
-    });
-});
-
-//PATCH (UPDATE) - scores
-app.patch('/stats/:_userId', authenticate, (req, res) => {
-    var id = req.params._userId;
-    var body = _.pick(req.body, ['statObj']);
-
-    if (!ObjectID.isValid(req.params._userId)) {
-        return res.status(400).send("ID is invalid");
-    }
-
-    Stat.findOne({ '_userId': id }).then((stat) => {
-
-        Object.keys(body.statObj).forEach((key) => {
-            if (key !== '_userId' && key !== '_id' && key !== '__v') {
-                stat._doc[key] += body.statObj[key];
-            }
-        });
-
-        Stat.findByIdAndUpdate(stat._id, { $set: stat }, { new: true }).then((newstat) => {
-            res.send({ newstat });
-        });
-    });
-});
-
-
-
-app.listen(PORT, () => {
-    console.log("Started on port ", PORT);
-});
-
-module.exports = { app };
