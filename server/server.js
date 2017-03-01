@@ -140,8 +140,8 @@ app.patch('/scores/:_userId', authenticate, (req, res) => {
 
         score.scores.push(body.score);
         score.scores.sort(compareNumbers);
-        var idObj = score._id;
-        delete score._id;
+     //   var idObj = score._id;
+     //   delete score._id;
 
         if (score.scores.length > 10) {
             var min = score.scores[9];
