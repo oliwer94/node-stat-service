@@ -3,12 +3,12 @@ node_js: "6.6.0"
 
 before_script:
   - npm install
+  - npm mongo -v
   
 services: mongodb
 
 branches:
   only: master
 
-  script:
-  - npm mongo -v
+script:
   - npm run test
