@@ -17,3 +17,8 @@ branches:
 
 script:
   - npm run test
+
+deploy:
+  provider: heroku
+  app: meyespace-userservice # optional if it's the same as your repo name
+  api_key: eb82729d-4018-488c-b4cb-7390a234b192
