@@ -9,6 +9,7 @@ var StatSchema = new mongoose.Schema(
             minlength: 1,
             unique: true           
         },
+        scores:[],
         timePlayedTotal: {
             type: Number,
             minlength: 1,
