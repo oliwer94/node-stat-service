@@ -59,16 +59,6 @@ io.on('connection', (socket) => {
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-var updateUserInCache = (token, _userId) => {
-
-    axios.post(process.env.AUTH_API_URL + '/updateUserInCache', {
-        token: token,
-        id: _userId
-    }).catch(function (error) {
-        console.log(error);
-    });
-};
-
 var auth = (req, res, next) => {
 
     axios.post(process.env.AUTH_API_URL + '/authenticate', {
