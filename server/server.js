@@ -1,7 +1,5 @@
 /*jshint esversion: 6 */
-
 require('./config/config');
-
 var express = require('express');
 var bodyParser = require('body-parser');
 const { ObjectID } = require('mongodb');
@@ -27,34 +25,7 @@ const localSocketRoom = "local";
 const globalSocketRoom = "global";
 
 const http = require('http');
-const socketIO = require('socket.io');
 var server = http.createServer(app);
-var io = socketIO(server);
-
-//to everyone in the room
-//io.to(params.room).emit();
-//to everyone but sender in the room
-//socket.broadcast.to(params.room).emit();
-io.listen("3003");
-
-io.on('connection', (socket) => {
-    console.log('New user connected');
-
-    socket.on('join', (callback) => {
-
-        //country or region ranking live feed
-        socket.join(localSocketRoom);
-
-        //global live feed
-        socket.join(globalSocketRoom);
-
-        callback();
-    });
-
-    socket.on('disconnect', () => {
-        console.log("a user has been disconnected");
-    });
-});
 
 app.use(bodyParser.json());
 app.use(cookieParser());
@@ -239,15 +210,21 @@ function updateLiveFeed(old_globalList, old_localList, country) {
             new_localList = scores;
         }).then(() => {
             if (!_.isEqual(new_globalList, old_globalList)) {
-
-                io.to(globalSocketRoom).emit(globalSocketRoom, new_globalList);
+                axiosPost(globalSocketRoom,new_globalList);
             }
 
             if (!_.isEqual(new_localList, old_localList)) {
-
-                io.to(localSocketRoom).emit(localSocketRoom, country, new_localList);
+                axiosPost(country,new_localList);
             }
         });
+    });
+}
+
+function axiosPost(room, data) {
+    axios.post(process.env.LIVEFEED_API_URL + `/room/${room}`, {
+        data
+    }).catch(function (error) {
+        console.log(error.response.status);
     });
 }
 
