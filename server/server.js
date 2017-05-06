@@ -44,6 +44,10 @@ var auth = (req, res, next) => {
     });
 };
 
+app.get('/ping', (req, res) => {
+   res.send("stat service is up and running");
+});
+
 //GET Scores 
 app.get('/', (req, res) => {
     // res.cookie('token', 'asdojasidjasoofu');
