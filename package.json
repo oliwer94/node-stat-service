@@ -15,7 +15,8 @@
     "mongoose": "^4.8.4",
     "persistent-cache": "^1.1.1",
     "validator": "^7.0.0",
-    "socket.io": "^1.7.3"
+    "socket.io": "^1.7.3",
+	 "axios": "^0.15.3"
   },
   "engines": {
     "node": "6.6.0"
@@ -27,7 +28,7 @@
     "start.local.db": "cd c:/program files/mongodb/server/3.4/bin/  && mongod.exe  --dbpath /users/oliwer/mongo-data"
   },
   "devDependencies": {
-    "axios": "^0.15.3",
+   
     "expect": "^1.20.2",
     "mocha": "^3.2.0",
     "nodemon": "^1.11.0",
