@@ -15,6 +15,6 @@ var ScoreSchema = new mongoose.Schema(
         }
     });
 
-var Score = mongoose.model("Score", ScoreSchema);
+var Score = mongoose.model("Global", ScoreSchema,"Global");
 
-module.exports = { Score };
+module.exports = { Score,ScoreSchema };

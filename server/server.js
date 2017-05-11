@@ -10,7 +10,7 @@ const axios = require('axios');
 
 var { mongoose } = require('./db/mongoose');
 var { Stat } = require('./db/models/stat');
-var { Score } = require('./db/models/score');
+var { Score, ScoreSchema } = require('./db/models/score');
 var { compareNumbers } = require('./utils/utils');
 
 var PORT = process.env.PORT;
@@ -23,12 +23,21 @@ const desceding = -1;
 const maxNoOfUserScore = 10;
 const localSocketRoom = "local";
 const globalSocketRoom = "global";
+const localPOSTURL = 'room/';
 
 const http = require('http');
 var server = http.createServer(app);
 
 app.use(bodyParser.json());
 app.use(cookieParser());
+
+app.use(function (req, res, next) {
+    res.header("Access-Control-Allow-Origin", '*'); //<-- you can change this with a specific url like http://localhost:4200
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+    res.header("Access-Control-Allow-Headers", 'Origin,X-Requested-With,Content-Type,Accept,content-type,application/json');
+    next();
+});
 
 var auth = (req, res, next) => {
 
@@ -45,7 +54,7 @@ var auth = (req, res, next) => {
 };
 
 app.get('/ping', (req, res) => {
-   res.send("stat service is up and running");
+    res.send("stat service is up and running");
 });
 
 //GET Scores 
@@ -54,17 +63,106 @@ app.get('/', (req, res) => {
     res.send('wow');
 });
 
-//GET Scores of user
-app.get('/score/:_userId', auth, (req, res) => {
+//GET get top x score of y Nation
+app.get('/national_top_x/:number/:country',/* auth,*/(req, res) => {
 
+    mongoose.model(req.params.country).find({}).sort({ "score": desceding }).limit(parseInt(req.params.number, 10)).then((scores) => {
+        if (scores !== undefined) {
+            res.send(scores);
+        }
+    });
+});
+
+//GET get top x score of global
+app.get('/global_top_x/:number',/* auth,*/(req, res) => {
+
+     mongoose.model("Global").find({}).sort({ "score": desceding }).limit(parseInt(req.params.number, 10)).then((scores) => {
+        if (scores !== undefined) {
+            res.send(scores);
+        }
+    });
+});
+
+//GET user's global rank
+app.get('/global_rank/:_userId',/* auth,*/(req, res) => {
+
+    //TODO: fix rank where they have the same scores so 1-2-3-4-5-6 -> 1-1-3-4-4-6  or something like that
+
+    //  if (req.StatusCode === 200) {
+    if (!ObjectID.isValid(req.params._userId)) {
+        return res.sendStatus(400);
+    }
+    var maxScore;
+    Stat.findOne({ '_userId': req.params._userId }).then((stat) => {
+
+        maxScore = Math.max(...stat._doc.scores);
+    }).then(() => {
+        Score.count({ 'score': { $gt: maxScore } }).then((score) => {
+            if (score !== undefined) {
+                score = score + 1;
+                res.send({ score });
+            }
+        });
+    });
+});
+
+//GET user's national rank
+app.get('/local_rank/:_userId',/* auth,*/(req, res) => {
+
+    //TODO: fix rank where they have the same scores so 1-2-3-4-5-6 -> 1-1-3-4-4-6  or something like that
+
+    //  if (req.StatusCode === 200) {
+    if (!ObjectID.isValid(req.params._userId)) {
+        return res.sendStatus(400);
+    }
+    var maxScore;
+    Stat.findOne({ '_userId': req.params._userId }).then((stat) => {
+
+        maxScore = Math.max(...stat._doc.scores);
+        country = stat._doc.country;
+    }).then(() => {
+
+        mongoose.model(country).count({ 'score': { $gt: maxScore } }).then((score) => {
+            if (score !== undefined) {
+                score = score + 1;
+                res.send({ score });
+            }
+        });
+    });
+});
+
+//GET X nation's leaderboard
+app.get('/nation_leaderboard/:country',/* auth,*/(req, res) => {
+
+
+    mongoose.model(req.params.country).find({}).then((scores) => {
+        if (scores !== undefined) {
+            res.send(scores);
+        }
+    });
+});
+
+//GET Global Leaderboard
+app.get('/leaderboard/global',/* auth,*/(req, res) => {
+
+    mongoose.model("Global").find({}).then((scores) => {
+        if (scores !== undefined) {
+            res.send(scores);
+        }
+    });
+});
+
+//GET Scores of user 
+app.get('/score/:_userId', auth, (req, res) => {
+   
     if (req.StatusCode === 200) {
         if (!ObjectID.isValid(req.params._userId)) {
             return res.sendStatus(400);
         }
 
-        Score.findOne({ '_userId': req.params._userId }).then((score) => {
-            if (score) {
-                res.send({ score });
+        Stat.findOne({ '_userId': req.params._userId }).then((stat) => {
+            if (stat) {
+                res.send( stat.scores );
             }
             else {
                 res.sendStatus(404);
@@ -78,7 +176,6 @@ app.get('/score/:_userId', auth, (req, res) => {
     else {
         res.sendStatus(req.StatusCode);
     }
-
 });
 
 //GET Stat of user
@@ -119,11 +216,11 @@ app.post('/saveUserToDb', (req, res) => {
 });
 
 //PATCH (UPDATE) - stats
-app.patch('/stats/:_userId', auth, (req, res) => {
-
+app.patch('/stats/:_userId', /*auth,*/(req, res) => {
+    req.StatusCode = 200;
     if (req.StatusCode === 200) {
         var id = req.params._userId;
-        var body = _.pick(req.body, ['statObj', "country"]);
+        var body = _.pick(req.body, ['statObj']);
 
         if (!ObjectID.isValid(req.params._userId)) {
             return res.status(400).send("ID is invalid");
@@ -157,8 +254,9 @@ app.patch('/stats/:_userId', auth, (req, res) => {
 
             Stat.findByIdAndUpdate(idObj, { $set: stat }, { new: true }).then((newstat) => {
                 res.send(newstat);
-                if (!_.isEqual(oldScores, stat.scores)) {
-                    updateScores(id, stat.scores, body.country);
+
+                if (!_.isEqual(Math.max(...oldScores), Math.max(...stat.scores))) {
+                    updateScores(id, Math.max(...stat.scores), stat.country);
                 }
             });
         });
@@ -169,7 +267,16 @@ app.patch('/stats/:_userId', auth, (req, res) => {
 });
 
 //update scores table 
-function updateScores(_userId, newscores, country) {
+function updateScores(_userId, newscore, country) {
+
+    // if(mongoose.modelNames
+      mongoose.connection.db.listCollections({ name: country })
+          .next(function (err, collinfo) {
+              if (err) {
+  
+              }
+              mongoose.model(country, ScoreSchema, country);
+          });
 
     var globalList = "";
     var localList = "";
@@ -177,63 +284,109 @@ function updateScores(_userId, newscores, country) {
     Score.find().sort({ "score": desceding }).limit(liveFeedDisplayLimit).then((scores) => {
         globalList = scores;
     }).then(() => {
-        Score.find({ country }).sort({ "score": desceding }).limit(liveFeedDisplayLimit).then((scores) => {
+        mongoose.model(country).find({}).sort({ "score": desceding }).limit(liveFeedDisplayLimit).then((scores) => {
             localList = scores;
         }).then(() => {
 
-            var query = Score.find().remove({ _userId });
-            query.remove({ _userId: ObjectID(_userId) }, function () {
+            Score.findOne({ _userId }).then((score) => {
 
-                var saves = [];
-                newscores.forEach((element, idx, array) => {
+                if (score === null) {
 
                     var newScoreEntry = new Score();
                     newScoreEntry._userId = _userId;
                     newScoreEntry.country = country;
-                    newScoreEntry.score = element;
-                    saves.push(new Score(newScoreEntry).save());
-                });
+                    newScoreEntry.score = newscore;
+                    newScoreEntry.save().then(() => {
+                        updateLiveFeed_Global(globalList);
+                    });
+                }
+                else {
+                    var idObj = score._id;
+                    score.score = newscore;
+                    delete score._id;
 
-                return Promise.all(saves)
-                    .then(() =>
-                        updateLiveFeed(globalList, localList, country));
+                    Score.findByIdAndUpdate(idObj, { $set: score }, { new: true }).then((newMaxScore) => {
+                        updateLiveFeed_Global(globalList);
+                    });
+                }
+            });
+
+            mongoose.model(country).findOne({ _userId }).then((score) => {
+
+                if (score === null) {
+
+                    var newScoreEntry = mongoose.model(country, ScoreSchema, country)();
+                    newScoreEntry._userId = _userId;
+                    newScoreEntry.country = country;
+                    newScoreEntry.score = newscore;
+                    newScoreEntry.save().then(() => {
+                        updateLiveFeed_Local(localList, country);
+                    });
+                }
+                else {
+                    var idObj = score._id;
+                    score.score = newscore;
+                    delete score._id;
+
+                    mongoose.model(country).findByIdAndUpdate(idObj, { $set: score }, { new: true }).then((newMaxScore) => {
+                        updateLiveFeed_Local(localList, country);
+                    });
+                }
             });
         });
     });
 }
 
-function updateLiveFeed(old_globalList, old_localList, country) {
+function updateLiveFeed_Global(old_globalList) {
 
     var new_globalList = "";
-    var new_localList = "";
 
     Score.find().sort({ "score": desceding }).limit(liveFeedDisplayLimit).then((scores) => {
         new_globalList = scores;
     }).then(() => {
-        Score.find({ country }).sort({ "score": desceding }).limit(liveFeedDisplayLimit).then((scores) => {
-            new_localList = scores;
-        }).then(() => {
-            if (!_.isEqual(new_globalList, old_globalList)) {
-                axiosPost(globalSocketRoom,new_globalList);
-            }
+        if (!_.isEqual(new_globalList, old_globalList)) {
+            axiosPost(globalSocketRoom, new_globalList);
+        }
+    });
+}
 
-            if (!_.isEqual(new_localList, old_localList)) {
-                axiosPost(country,new_localList);
-            }
-        });
+function updateLiveFeed_Local(old_localList, country) {
+
+    var new_localList = "";
+
+    Score.find({ country }).sort({ "score": desceding }).limit(liveFeedDisplayLimit).then((scores) => {
+        new_localList = scores;
+    }).then(() => {
+
+        if (!_.isEqual(new_localList, old_localList)) {
+            axiosPost(localPOSTURL + country, new_localList);
+        }
     });
 }
 
 function axiosPost(room, data) {
-    axios.post(process.env.LIVEFEED_API_URL + `/room/${room}`, {
+    axios.post(process.env.LIVEFEED_API_URL + `/${room}`, {
         data
     }).catch(function (error) {
-        console.log(error.response.status);
+        console.log(error.status);
     });
 }
 
 app.listen(PORT, () => {
     console.log("Started on port ", PORT);
 });
+
+mongoose.connection.on('open', function () {
+    mongoose.connection.db.listCollections().toArray(function (err, names) {
+        if (err) {
+            console.log(err);
+        } else {
+            names.forEach(element => {
+                mongoose.model(element.name, ScoreSchema, element.name);
+            });
+        }
+    });
+});
+
 
 module.exports = { app };
