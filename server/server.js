@@ -206,10 +206,11 @@ app.get('/stat/:_userId', auth, (req, res) => {
 
 app.post('/saveUserToDb', (req, res) => {
 
-    var body = _.pick(req.body, ['_userId']);
+    var body = _.pick(req.body, ['_userId','country']);
 
     var newStatEntry = new Stat();
     newStatEntry._userId = body._userId;
+    newStatEntry.country = body.country;
     newStatEntry.save();
 
     res.sendStatus(200);
