@@ -29,6 +29,7 @@ const http = require('http');
 var server = http.createServer(app);
 
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use(function (req, res, next) {
@@ -217,12 +218,13 @@ app.post('/saveUserToDb', (req, res) => {
 });
 
 //PATCH (UPDATE) - stats
-app.patch('/stats/:_userId', /*auth,*/(req, res) => {
+app.post('/stats/:_userId', /*auth,*/(req, res) => {
     req.StatusCode = 200;
     if (req.StatusCode === 200) {
         var id = req.params._userId;
         var body = _.pick(req.body, ['statObj']);
-
+        var obj = JSON.parse(body.statObj);
+        body.statObj = obj;
         if (!ObjectID.isValid(req.params._userId)) {
             return res.status(400).send("ID is invalid");
         }
