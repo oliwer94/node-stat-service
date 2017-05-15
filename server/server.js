@@ -77,7 +77,7 @@ app.get('/national_top_x/:number/:country',/* auth,*/(req, res) => {
 //GET get top x score of global
 app.get('/global_top_x/:number',/* auth,*/(req, res) => {
 
-     mongoose.model("Global").find({}).sort({ "score": desceding }).limit(parseInt(req.params.number, 10)).then((scores) => {
+    mongoose.model("Global").find({}).sort({ "score": desceding }).limit(parseInt(req.params.number, 10)).then((scores) => {
         if (scores !== undefined) {
             res.send(scores);
         }
@@ -155,7 +155,7 @@ app.get('/leaderboard/global',/* auth,*/(req, res) => {
 
 //GET Scores of user 
 app.get('/score/:_userId', auth, (req, res) => {
-   
+
     if (req.StatusCode === 200) {
         if (!ObjectID.isValid(req.params._userId)) {
             return res.sendStatus(400);
@@ -163,7 +163,7 @@ app.get('/score/:_userId', auth, (req, res) => {
 
         Stat.findOne({ '_userId': req.params._userId }).then((stat) => {
             if (stat) {
-                res.send( stat.scores );
+                res.send(stat.scores);
             }
             else {
                 res.sendStatus(404);
@@ -207,7 +207,7 @@ app.get('/stat/:_userId', auth, (req, res) => {
 
 app.post('/saveUserToDb', (req, res) => {
 
-    var body = _.pick(req.body, ['_userId','country']);
+    var body = _.pick(req.body, ['_userId', 'country']);
 
     var newStatEntry = new Stat();
     newStatEntry._userId = body._userId;
@@ -242,7 +242,12 @@ app.post('/stats/:_userId', /*auth,*/(req, res) => {
                         });
                     }
                     else {
-                        stat._doc[key] += body.statObj[key];
+                        if (key.toLocaleLowerCase().indexOf("total") >= 0) {
+                            stat._doc[key] += body.statObj[key];
+                        }
+                        else {
+                            stat._doc[key] = (stat._doc[key] > body.statObj[key]) ? stat._doc[key] : body.statObj[key];
+                        }
                     }
                 }
             });
@@ -273,13 +278,13 @@ app.post('/stats/:_userId', /*auth,*/(req, res) => {
 function updateScores(_userId, newscore, country) {
 
     // if(mongoose.modelNames
-      mongoose.connection.db.listCollections({ name: country })
-          .next(function (err, collinfo) {
-              if (err) {
-  
-              }
-              mongoose.model(country, ScoreSchema, country);
-          });
+    mongoose.connection.db.listCollections({ name: country })
+        .next(function (err, collinfo) {
+            if (err) {
+
+            }
+            mongoose.model(country, ScoreSchema, country);
+        });
 
     var globalList = "";
     var localList = "";
