@@ -42,14 +42,16 @@ app.use(function (req, res, next) {
 
 var auth = (req, res, next) => {
 
+    var token = req.cookies.token || req.body.token;
+
     axios.post(process.env.AUTH_API_URL + '/authenticate', {
-        token: req.cookies.token
+       token
     }).then((response) => {
         req.StatusCode = response.status;
         next();
     }).catch(function (error) {
         console.log(error);
-        req.StatusCode = error.response.status;
+        req.StatusCode = 401;//error.response.status;
         next();
     });
 };
@@ -75,7 +77,7 @@ app.get('/national_top_x/:number/:country',/* auth,*/(req, res) => {
 });
 
 //GET get top x score of global
-app.get('/global_top_x/:number',/* auth,*/(req, res) => {
+app.get('/global_top_x/:number', auth,(req, res) => {
 
     mongoose.model("Global").find({}).sort({ "score": desceding }).limit(parseInt(req.params.number, 10)).then((scores) => {
         if (scores !== undefined) {
@@ -85,7 +87,7 @@ app.get('/global_top_x/:number',/* auth,*/(req, res) => {
 });
 
 //GET user's global rank
-app.get('/global_rank/:_userId',/* auth,*/(req, res) => {
+app.get('/global_rank/:_userId', auth,(req, res) => {
 
     //TODO: fix rank where they have the same scores so 1-2-3-4-5-6 -> 1-1-3-4-4-6  or something like that
 
@@ -108,7 +110,7 @@ app.get('/global_rank/:_userId',/* auth,*/(req, res) => {
 });
 
 //GET user's national rank
-app.get('/local_rank/:_userId',/* auth,*/(req, res) => {
+app.get('/local_rank/:_userId', auth,(req, res) => {
 
     //TODO: fix rank where they have the same scores so 1-2-3-4-5-6 -> 1-1-3-4-4-6  or something like that
 
@@ -133,7 +135,7 @@ app.get('/local_rank/:_userId',/* auth,*/(req, res) => {
 });
 
 //GET X nation's leaderboard
-app.get('/nation_leaderboard/:country',/* auth,*/(req, res) => {
+app.get('/nation_leaderboard/:country', auth,(req, res) => {
 
 
     mongoose.model(req.params.country).find({}).then((scores) => {
@@ -144,7 +146,7 @@ app.get('/nation_leaderboard/:country',/* auth,*/(req, res) => {
 });
 
 //GET Global Leaderboard
-app.get('/leaderboard/global',/* auth,*/(req, res) => {
+app.get('/leaderboard/global', auth,(req, res) => {
 
     mongoose.model("Global").find({}).then((scores) => {
         if (scores !== undefined) {
@@ -218,8 +220,7 @@ app.post('/saveUserToDb', (req, res) => {
 });
 
 //PATCH (UPDATE) - stats
-app.post('/stats/:_userId', /*auth,*/(req, res) => {
-    req.StatusCode = 200;
+app.post('/stats/:_userId', auth,(req, res) => {
     if (req.StatusCode === 200) {
         var id = req.params._userId;
         var body = _.pick(req.body, ['statObj']);
@@ -395,6 +396,5 @@ mongoose.connection.on('open', function () {
         }
     });
 });
-
 
 module.exports = { app };
