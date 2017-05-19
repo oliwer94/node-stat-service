@@ -14,6 +14,10 @@ var StatSchema = new mongoose.Schema(
             required: true
         },
         scores:[],
+       username: {
+            type: String,
+            required: true,
+        },
         timePlayedTotal: {
             type: Number,
             minlength: 1,

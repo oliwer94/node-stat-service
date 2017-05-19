@@ -1,6 +1,5 @@
 var mongoose = require('mongoose');
 
-
 var ScoreSchema = new mongoose.Schema(
     {
         _userId: {
@@ -9,6 +8,10 @@ var ScoreSchema = new mongoose.Schema(
             minlength: 1                    
         },
         score: Number,
+        username: {
+            type: String,
+            required: true
+        },
         country:{
             type: String,
             required: true

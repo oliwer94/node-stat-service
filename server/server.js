@@ -209,11 +209,12 @@ app.get('/stat/:_userId', auth, (req, res) => {
 
 app.post('/saveUserToDb', (req, res) => {
 
-    var body = _.pick(req.body, ['_userId', 'country']);
+    var body = _.pick(req.body, ['_userId', 'country','username']);
 
     var newStatEntry = new Stat();
     newStatEntry._userId = body._userId;
     newStatEntry.country = body.country;
+    newStatEntry.username = body.username;
     newStatEntry.save();
 
     res.sendStatus(200);
@@ -265,7 +266,7 @@ app.post('/stats/:_userId', auth,(req, res) => {
                 res.send(newstat);
 
                 if (!_.isEqual(Math.max(...oldScores), Math.max(...stat.scores))) {
-                    updateScores(id, Math.max(...stat.scores), stat.country);
+                    updateScores(id, Math.max(...stat.scores), stat.country,stat.username);
                 }
             });
         });
@@ -276,7 +277,7 @@ app.post('/stats/:_userId', auth,(req, res) => {
 });
 
 //update scores table 
-function updateScores(_userId, newscore, country) {
+function updateScores(_userId, newscore, country,username) {
 
     // if(mongoose.modelNames
     mongoose.connection.db.listCollections({ name: country })
@@ -305,6 +306,7 @@ function updateScores(_userId, newscore, country) {
                     newScoreEntry._userId = _userId;
                     newScoreEntry.country = country;
                     newScoreEntry.score = newscore;
+                    newScoreEntry.username = username;
                     newScoreEntry.save().then(() => {
                         updateLiveFeed_Global(globalList);
                     });
@@ -328,6 +330,7 @@ function updateScores(_userId, newscore, country) {
                     newScoreEntry._userId = _userId;
                     newScoreEntry.country = country;
                     newScoreEntry.score = newscore;
+                    newScoreEntry.username = username;
                     newScoreEntry.save().then(() => {
                         updateLiveFeed_Local(localList, country);
                     });
