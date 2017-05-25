@@ -12,6 +12,29 @@ var { mongoose } = require('./db/mongoose');
 var { Stat } = require('./db/models/stat');
 var { Score, ScoreSchema } = require('./db/models/score');
 var { compareNumbers } = require('./utils/utils');
+/*
+const populateSweden = (done) => {
+    mongoose.model("TestCountry", ScoreSchema, "TestCountry");
+    mongoose.model("TestCountry").remove({}).then(() => {
+        var data = [];
+        for (var i = 1; i < 58; i++) {
+
+            var user = mongoose.model("TestCountry", ScoreSchema, "TestCountry")();
+            user._userId = new ObjectID();
+            user.country = "TestCountry";
+            user.username = "Test" + i;
+            user.score = i * 10;
+            data.push(user.save());
+        }
+
+        return Promise.all(
+            data
+        );
+    });
+};
+
+populateSweden();*/
+
 
 var PORT = process.env.PORT;
 var app = express();
@@ -97,7 +120,6 @@ app.get('/global_rank/:_userId', auth, (req, res) => {
     }
     var maxScore;
     Stat.findOne({ '_userId': req.params._userId }).then((stat) => {
-
         maxScore = Math.max(...stat._doc.scores);
     }).then(() => {
         Score.count({ 'score': { $gt: maxScore } }).then((score) => {
@@ -112,8 +134,20 @@ app.get('/global_rank/:_userId', auth, (req, res) => {
 //GET user's global rank
 app.get('/global_rankings/:offset', auth, (req, res) => {
     if (req.StatusCode === 200) {
-        mongoose.model("Global").find({}).sort({ "score": desceding }).skip(Number.parseFloat(req.params.offset)).limit(liveFeedDisplayLimit).then((scores) => {
-            res.send({ scores });
+        mongoose.model("Global").find({}).sort({ "score": desceding }).skip(Number.parseFloat(req.params.offset)).limit(liveFeedDisplayLimit * 2).then((scores) => {
+
+            var data = [];
+
+            scores.forEach(element => {
+                var obj = {}
+                obj.username = element.username;
+                obj.score = element.score;
+                obj.country = element.country;
+                data.push(obj);
+
+            })
+
+            res.send({ data });
         });
     }
 });
@@ -121,19 +155,28 @@ app.get('/global_rankings/:offset', auth, (req, res) => {
 //GET user's global rank
 app.get('/local_rankings/:country/:offset', auth, (req, res) => {
     if (req.StatusCode === 200) {
-        mongoose.model(req.params.country).find({}).sort({ "score": desceding }).skip(Number.parseFloat(req.params.offset)).limit(liveFeedDisplayLimit).then((scores) => {
-            res.send({ scores });
+        mongoose.model(req.params.country).find({}).sort({ "score": desceding }).skip(Number.parseFloat(req.params.offset)).limit(liveFeedDisplayLimit * 2).then((scores) => {
+
+            var data = [];
+
+            scores.forEach(element => {
+                var obj = {}
+                obj.username = element.username;
+                obj.score = element.score;
+                data.push(obj);
+            })
+
+            res.send({ data });
         });
     }
 });
-
 //GET user's global rank
 app.get('/page_numbers/:country', auth, (req, res) => {
     if (req.StatusCode === 200) {
 
-        mongoose.model("Global").find({}).then((scores_global) => {            
+        mongoose.model("Global").find({}).then((scores_global) => {
             mongoose.model(req.params.country).find({}).then((scores) => {
-                res.send({ "global":scores_global.length,"local":scores.length });
+                res.send({ "global": scores_global.length, "local": scores.length });
             });
         });
 
@@ -256,8 +299,8 @@ app.post('/stats/:_userId', auth, (req, res) => {
     if (req.StatusCode === 200) {
         var id = req.params._userId;
         var body = _.pick(req.body, ['statObj']);
-        var obj = JSON.parse(body.statObj);
-        body.statObj = obj;
+        //var obj = JSON.parse(body.statObj);
+      //  body.statObj = obj;
         if (!ObjectID.isValid(req.params._userId)) {
             return res.status(400).send("ID is invalid");
         }
