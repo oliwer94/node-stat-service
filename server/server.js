@@ -68,18 +68,18 @@ app.use(function (req, res, next) {
 var auth = (req, res, next) => {
 
     var token = req.cookies.token || req.body.token;
-    console.log(token);
+    console.log("asdasd  token",token);
 
     axios.post(process.env.AUTH_API_URL + '/authenticate', {
         token
     }).then((response) => {
         req.StatusCode = response.status;
-        console.log(response.status);
+        console.log("asdasd aaa",response.status);
         next();
     }).catch(function (error) {
         console.log(error);
         req.StatusCode = 401;//error.response.status;
-        console.log("unauthorized 401");
+        console.log("asdasd  401");
         next();
     });
 };
@@ -95,7 +95,7 @@ app.get('/', (req, res) => {
 });
 
 //GET get top x score of y Nation
-app.get('/national_top_x/:number/:country',/* auth,*/(req, res) => {
+app.get('/national_top_x/:number/:country', auth,(req, res) => {
 
     mongoose.model(req.params.country).find({}).sort({ "score": desceding }).limit(parseInt(req.params.number, 10)).then((scores) => {
         if (scores !== undefined) {
