@@ -7,6 +7,7 @@ const _ = require('lodash');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const axios = require('axios');
+const cors = require("cors");
 
 var { mongoose } = require('./db/mongoose');
 var { Stat } = require('./db/models/stat');
@@ -54,6 +55,7 @@ var server = http.createServer(app);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(cors({credentials: true, origin: true}));
 
 app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", process.env.CORS); //<-- you can change this with a specific url like http://localhost:4200
