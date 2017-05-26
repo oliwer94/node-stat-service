@@ -55,7 +55,7 @@ var server = http.createServer(app);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(cors({credentials: true, origin: true}));
+app.use(cors({ credentials: true, origin: true }));
 
 app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", process.env.CORS); //<-- you can change this with a specific url like http://localhost:4200
@@ -68,17 +68,19 @@ app.use(function (req, res, next) {
 var auth = (req, res, next) => {
 
     var token = req.cookies.token || req.body.token;
-    console.log("asdasd  token",token);
+    console.log("asdasd  token", token);
 
     axios.post(process.env.AUTH_API_URL + '/authenticate', {
         token
     }).then((response) => {
         req.StatusCode = response.status;
-        console.log("asdasd aaa",response.status);
+        console.log("asdasd aaa", response.status);
         next();
     }).catch(function (error) {
-        console.log(error);
-        req.StatusCode = 401;//error.response.status;
+        // console.log(error);
+        console.log(error.message);
+        req.StatusCode = error.response.status;
+        //  req.StatusCode = 401;//error.response.status;
         console.log("asdasd  401");
         next();
     });
@@ -95,23 +97,32 @@ app.get('/', (req, res) => {
 });
 
 //GET get top x score of y Nation
-app.get('/national_top_x/:number/:country', auth,(req, res) => {
-
-    mongoose.model(req.params.country).find({}).sort({ "score": desceding }).limit(parseInt(req.params.number, 10)).then((scores) => {
-        if (scores !== undefined) {
-            res.send(scores);
-        }
-    });
+app.get('/national_top_x/:number/:country', auth, (req, res) => {
+    console.log("national top x", parseInt(req.params.number, 10));
+    if (req.StatusCode === 200) {
+        mongoose.model(req.params.country).find({}).sort({ "score": desceding }).limit(parseInt(req.params.number, 10)).then((scores) => {
+            if (scores !== undefined) {
+                res.send(scores);
+            }
+        }).catch((err) => {console.log(err); });
+    }
+    else {
+        res.sendStatus(req.StatusCode);
+    }
 });
 
 //GET get top x score of global
 app.get('/global_top_x/:number', auth, (req, res) => {
-
-    mongoose.model("Global").find({}).sort({ "score": desceding }).limit(parseInt(req.params.number, 10)).then((scores) => {
-        if (scores !== undefined) {
-            res.send(scores);
-        }
-    });
+    if (req.StatusCode === 200) {
+        mongoose.model("Global").find({}).sort({ "score": desceding }).limit(parseInt(req.params.number, 10)).then((scores) => {
+            if (scores !== undefined) {
+                res.send(scores);
+            }
+        }).catch((err) => {console.log(err); });
+    }
+    else {
+        res.sendStatus(req.StatusCode);
+    }
 });
 
 //GET user's global rank
@@ -119,21 +130,25 @@ app.get('/global_rank/:_userId', auth, (req, res) => {
 
     //TODO: fix rank where they have the same scores so 1-2-3-4-5-6 -> 1-1-3-4-4-6  or something like that
 
-    //  if (req.StatusCode === 200) {
-    if (!ObjectID.isValid(req.params._userId)) {
-        return res.sendStatus(400);
+    if (req.StatusCode === 200) {
+        if (!ObjectID.isValid(req.params._userId)) {
+            return res.sendStatus(400);
+        }
+        var maxScore;
+        Stat.findOne({ '_userId': req.params._userId }).then((stat) => {
+            maxScore = Math.max(...stat._doc.scores);
+        }).then(() => {
+            Score.count({ 'score': { $gt: maxScore } }).then((score) => {
+                if (score !== undefined) {
+                    score = score + 1;
+                    res.send({ score });
+                }
+            });
+        }).catch((err) => {console.log(err); });
     }
-    var maxScore;
-    Stat.findOne({ '_userId': req.params._userId }).then((stat) => {
-        maxScore = Math.max(...stat._doc.scores);
-    }).then(() => {
-        Score.count({ 'score': { $gt: maxScore } }).then((score) => {
-            if (score !== undefined) {
-                score = score + 1;
-                res.send({ score });
-            }
-        });
-    });
+    else {
+        res.sendStatus(req.StatusCode);
+    }
 });
 
 //GET user's global rank
@@ -153,7 +168,10 @@ app.get('/global_rankings/:offset', auth, (req, res) => {
             })
 
             res.send({ data });
-        });
+        }).catch((err) => {console.log(err); });
+    }
+    else {
+        res.sendStatus(req.StatusCode);
     }
 });
 
@@ -172,7 +190,10 @@ app.get('/local_rankings/:country/:offset', auth, (req, res) => {
             })
 
             res.send({ data });
-        });
+        }).catch((err) => {console.log(err); });
+    }
+    else {
+        res.sendStatus(req.StatusCode);
     }
 });
 //GET user's global rank
@@ -183,8 +204,11 @@ app.get('/page_numbers/:country', auth, (req, res) => {
             mongoose.model(req.params.country).find({}).then((scores) => {
                 res.send({ "global": scores_global.length, "local": scores.length });
             });
-        });
+        }).catch((err) => {console.log(err); });
 
+    }
+    else {
+        res.sendStatus(req.StatusCode);
     }
 });
 
@@ -193,45 +217,57 @@ app.get('/local_rank/:_userId', auth, (req, res) => {
 
     //TODO: fix rank where they have the same scores so 1-2-3-4-5-6 -> 1-1-3-4-4-6  or something like that
 
-    //  if (req.StatusCode === 200) {
-    if (!ObjectID.isValid(req.params._userId)) {
-        return res.sendStatus(400);
+    if (req.StatusCode === 200) {
+        if (!ObjectID.isValid(req.params._userId)) {
+            return res.sendStatus(400);
+        }
+        var maxScore;
+        Stat.findOne({ '_userId': req.params._userId }).then((stat) => {
+
+            maxScore = Math.max(...stat._doc.scores);
+            country = stat._doc.country;
+        }).then(() => {
+
+            mongoose.model(country).count({ 'score': { $gt: maxScore } }).then((score) => {
+                if (score !== undefined) {
+                    score = score + 1;
+                    res.send({ score });
+                }
+            });
+        }).catch((err) => {console.log(err); });
     }
-    var maxScore;
-    Stat.findOne({ '_userId': req.params._userId }).then((stat) => {
-
-        maxScore = Math.max(...stat._doc.scores);
-        country = stat._doc.country;
-    }).then(() => {
-
-        mongoose.model(country).count({ 'score': { $gt: maxScore } }).then((score) => {
-            if (score !== undefined) {
-                score = score + 1;
-                res.send({ score });
-            }
-        });
-    });
+    else {
+        res.sendStatus(req.StatusCode);
+    }
 });
 
 //GET X nation's leaderboard
 app.get('/nation_leaderboard/:country', auth, (req, res) => {
 
-
-    mongoose.model(req.params.country).find({}).then((scores) => {
-        if (scores !== undefined) {
-            res.send(scores);
-        }
-    });
+    if (req.StatusCode === 200) {
+        mongoose.model(req.params.country).find({}).then((scores) => {
+            if (scores !== undefined) {
+                res.send(scores);
+            }
+        }).catch((err) => {console.log(err); });
+    }
+    else {
+        res.sendStatus(req.StatusCode);
+    }
 });
 
 //GET Global Leaderboard
 app.get('/leaderboard/global', auth, (req, res) => {
-
-    mongoose.model("Global").find({}).then((scores) => {
-        if (scores !== undefined) {
-            res.send(scores);
-        }
-    });
+    if (req.StatusCode === 200) {
+        mongoose.model("Global").find({}).then((scores) => {
+            if (scores !== undefined) {
+                res.send(scores);
+            }
+        }).catch((err) => {console.log(err); });
+    }
+    else {
+        res.sendStatus(req.StatusCode);
+    }
 });
 
 //GET Scores of user 
@@ -253,7 +289,7 @@ app.get('/score/:_userId', auth, (req, res) => {
             (e) => {
                 res.sendStatus(400);
             }
-        );
+        ).catch((err) => {console.log(err); });
     }
     else {
         res.sendStatus(req.StatusCode);
@@ -279,7 +315,7 @@ app.get('/stat/:_userId', auth, (req, res) => {
             (e) => {
                 res.sendStatus(400);
             }
-        );
+        ).catch((err) => {console.log(err); });
     }
     else {
         res.sendStatus(req.StatusCode);
@@ -305,7 +341,7 @@ app.post('/stats/:_userId', auth, (req, res) => {
         var id = req.params._userId;
         var body = _.pick(req.body, ['statObj']);
         //var obj = JSON.parse(body.statObj);
-      //  body.statObj = obj;
+        //  body.statObj = obj;
         if (!ObjectID.isValid(req.params._userId)) {
             return res.status(400).send("ID is invalid");
         }
