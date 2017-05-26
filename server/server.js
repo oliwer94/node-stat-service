@@ -68,15 +68,18 @@ app.use(function (req, res, next) {
 var auth = (req, res, next) => {
 
     var token = req.cookies.token || req.body.token;
+    console.log(token);
 
     axios.post(process.env.AUTH_API_URL + '/authenticate', {
         token
     }).then((response) => {
         req.StatusCode = response.status;
+        console.log(response.status);
         next();
     }).catch(function (error) {
         console.log(error);
         req.StatusCode = 401;//error.response.status;
+        console.log("unauthorized 401");
         next();
     });
 };
