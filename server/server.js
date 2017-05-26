@@ -69,6 +69,7 @@ var auth = (req, res, next) => {
 
     var token = req.cookies.token || req.body.token;
     console.log("asdasd  token", req.cookies.token + "   -   " + req.body.token);
+    if(token === undefined)console.log(req);
 
     axios.post(process.env.AUTH_API_URL + '/authenticate', {
         token
