@@ -69,7 +69,7 @@ var auth = (req, res, next) => {
 
     var token = req.cookies.token || req.body.token || req.header('token');
     console.log("asdasd  token", req.cookies.token + "   -   " + req.body.token + " --- " + req.header('token'));
-    if(token === undefined)console.log(req);
+    if (token === undefined) console.log(req);
 
     axios.post(process.env.AUTH_API_URL + '/authenticate', {
         token
@@ -105,7 +105,7 @@ app.get('/national_top_x/:number/:country', auth, (req, res) => {
             if (scores !== undefined) {
                 res.send(scores);
             }
-        }).catch((err) => {console.log(err); });
+        }).catch((err) => { console.log(err); });
     }
     else {
         res.sendStatus(req.StatusCode);
@@ -119,7 +119,7 @@ app.get('/global_top_x/:number', auth, (req, res) => {
             if (scores !== undefined) {
                 res.send(scores);
             }
-        }).catch((err) => {console.log(err); });
+        }).catch((err) => { console.log(err); });
     }
     else {
         res.sendStatus(req.StatusCode);
@@ -145,7 +145,7 @@ app.get('/global_rank/:_userId', auth, (req, res) => {
                     res.send({ score });
                 }
             });
-        }).catch((err) => {console.log(err); });
+        }).catch((err) => { console.log(err); });
     }
     else {
         res.sendStatus(req.StatusCode);
@@ -169,7 +169,7 @@ app.get('/global_rankings/:offset', auth, (req, res) => {
             })
 
             res.send({ data });
-        }).catch((err) => {console.log(err); });
+        }).catch((err) => { console.log(err); });
     }
     else {
         res.sendStatus(req.StatusCode);
@@ -191,7 +191,7 @@ app.get('/local_rankings/:country/:offset', auth, (req, res) => {
             })
 
             res.send({ data });
-        }).catch((err) => {console.log(err); });
+        }).catch((err) => { console.log(err); });
     }
     else {
         res.sendStatus(req.StatusCode);
@@ -205,7 +205,7 @@ app.get('/page_numbers/:country', auth, (req, res) => {
             mongoose.model(req.params.country).find({}).then((scores) => {
                 res.send({ "global": scores_global.length, "local": scores.length });
             });
-        }).catch((err) => {console.log(err); });
+        }).catch((err) => { console.log(err); });
 
     }
     else {
@@ -235,7 +235,7 @@ app.get('/local_rank/:_userId', auth, (req, res) => {
                     res.send({ score });
                 }
             });
-        }).catch((err) => {console.log(err); });
+        }).catch((err) => { console.log(err); });
     }
     else {
         res.sendStatus(req.StatusCode);
@@ -250,7 +250,7 @@ app.get('/nation_leaderboard/:country', auth, (req, res) => {
             if (scores !== undefined) {
                 res.send(scores);
             }
-        }).catch((err) => {console.log(err); });
+        }).catch((err) => { console.log(err); });
     }
     else {
         res.sendStatus(req.StatusCode);
@@ -264,7 +264,7 @@ app.get('/leaderboard/global', auth, (req, res) => {
             if (scores !== undefined) {
                 res.send(scores);
             }
-        }).catch((err) => {console.log(err); });
+        }).catch((err) => { console.log(err); });
     }
     else {
         res.sendStatus(req.StatusCode);
@@ -290,7 +290,7 @@ app.get('/score/:_userId', auth, (req, res) => {
             (e) => {
                 res.sendStatus(400);
             }
-        ).catch((err) => {console.log(err); });
+        ).catch((err) => { console.log(err); });
     }
     else {
         res.sendStatus(req.StatusCode);
@@ -316,7 +316,7 @@ app.get('/stat/:_userId', auth, (req, res) => {
             (e) => {
                 res.sendStatus(400);
             }
-        ).catch((err) => {console.log(err); });
+        ).catch((err) => { console.log(err); });
     }
     else {
         res.sendStatus(req.StatusCode);
@@ -343,6 +343,7 @@ app.post('/stats/:_userId', auth, (req, res) => {
         var body = _.pick(req.body, ['statObj']);
         //var obj = JSON.parse(body.statObj);
         //  body.statObj = obj;
+        console.log(body.statObj);
         if (!ObjectID.isValid(req.params._userId)) {
             return res.status(400).send("ID is invalid");
         }
@@ -385,7 +386,7 @@ app.post('/stats/:_userId', auth, (req, res) => {
                     updateScores(id, Math.max(...stat.scores), stat.country, stat.username);
                 }
             });
-        });
+        }).catch((err) => { console.log(err); });
     }
     else {
         res.sendStatus(req.StatusCode);
