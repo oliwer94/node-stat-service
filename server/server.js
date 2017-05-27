@@ -61,14 +61,14 @@ app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", process.env.CORS); //<-- you can change this with a specific url like http://localhost:4200
     res.header("Access-Control-Allow-Credentials", "true");
     res.header('Access-Control-Allow-Methods', 'OPTIONS,GET,PUT,POST,DELETE');
-    res.header("Access-Control-Allow-Headers", 'Authorization,Origin,X-Requested-With,Content-Type,Accept,content-type,application/json');
+    res.header("Access-Control-Allow-Headers", 'token,Authorization,Origin,X-Requested-With,Content-Type,Accept,content-type,application/json');
     next();
 });
 
 var auth = (req, res, next) => {
 
-    var token = req.cookies.token || req.body.token;
-    console.log("asdasd  token", req.cookies.token + "   -   " + req.body.token);
+    var token = req.cookies.token || req.body.token || req.header('token');
+    console.log("asdasd  token", req.cookies.token + "   -   " + req.body.token + " --- " + req.header('token'));
     if(token === undefined)console.log(req);
 
     axios.post(process.env.AUTH_API_URL + '/authenticate', {
