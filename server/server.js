@@ -341,8 +341,8 @@ app.post('/stats/:_userId', auth, (req, res) => {
     if (req.StatusCode === 200) {
         var id = req.params._userId;
         var body = _.pick(req.body, ['statObj']);
-        //var obj = JSON.parse(body.statObj);
-        //  body.statObj = obj;
+        var obj = JSON.parse(body.statObj);
+         body.statObj = obj;
         console.log(body.statObj);
         if (!ObjectID.isValid(req.params._userId)) {
             return res.status(400).send("ID is invalid");
