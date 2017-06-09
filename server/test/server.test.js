@@ -1,12 +1,17 @@
+/*jshint esversion: 6 */
 const expect = require('expect');
 const request = require('supertest');
-const {ObjectID} = require('mongodb');
+const { ObjectID } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
+const sinon = require('sinon');
+var auth = require('./../auth/authentication');
 
-const {app} = require('./../server');
-const {Score} = require('./../db/models/score');
-const {Stat} = require('./../db/models/stat');
+var agent;
+
+var _app;// = require('./../server');
+const { Score } = require('./../db/models/score');
+const { Stat } = require('./../db/models/stat');
 const seed = require('./seed/seed');
 
 var testID = seed.testID;
@@ -14,55 +19,53 @@ var testID = seed.testID;
 var testScores = seed.testScores;
 var testStats = seed.testStats;
 
+
+
 beforeEach((done) => {
 
-    axios.post('http://localhost:3002/removeUser', {
-        token: 'asdojasidjasoofu',
-        id: testID
-    }).catch(function (error) {
-        //  console.log(error);
-    });
-    axios.post('http://localhost:3002/adduser', {
-        token: 'asdojasidjasoofu',
-        id: testID
-    }).catch(function (error) {
-        //console.log(error);
-    });
+
+    //important to stub before we load our app
+    ensureAuthenticatedSpy = sinon.stub(auth, 'auth').callsFake(
+        function (res, req, next) {
+            req.StatusCode = 200;
+            req.req.StatusCode = 200;
+            next();
+        }
+    );;
+    //this ensures we call our next() function on our middleware
+    ensureAuthenticatedSpy.callsArg(2);
+
+    // agent = require('supertest');
+    var { app } = require('./../server');
+    _app = app;
 
     seed.populateStat(done);
+
 });
 beforeEach((done) => {
     seed.populateScore(done);
 });
+//.set('Cookie', [`token=${testUsers[2].tokens[0].token}`])
+var ensureAuthenticatedSpy;
 
-//   .set('Cookie', [`token=${testUsers[2].tokens[0].token}`])
+before(function () {
 
-describe('GET /score/:_userId', () => {
 
-    it('should return user\'s score', (done) => {
+});
 
-        request(app)
-            .get(`/score/${testID}`)
-            .set('Cookie', [`token=asdojasidjasoofu`])
-            .expect(200)
-            .expect((res) => {
-                expect(res.body.score._userId).toBe(testID.toHexString());
-            })
-            .end((err) => {
-                if (err) {
-                    return done(err);
-                }
-                Score.find({ '_userId': testID }).then((score) => {
-                    expect(score.length).toBe(1);
-                    expect(score[0].scores).toEqual([]);
-                    return done();
-                }).catch((e) => done(e));
-            });
-    });
+
+describe('GET anything without token', () => {
+
+    /* 
+     afterEach(() => {
+         //assert that our middleware was called once for each test
+         sinon.assert.calledOnce(ensureAuthenticatedSpy);
+ 
+         ensureAuthenticatedSpy.reset();
+     })*/
 
     it('should return a 401', (done) => {
-
-        request(app)
+        request(_app)
             .get(`/score/${testID}`)
             .expect(401)
             .expect((res) => {
@@ -70,13 +73,12 @@ describe('GET /score/:_userId', () => {
             })
             .end(done);
     });
-
-});
+});/*
 
 describe('GET /stat/:_userId', () => {
 
     it('should return user\'s stat', (done) => {
-        request(app)
+        request(_app)
             .get(`/stat/${testID}`)
             .set('Cookie', [`token=asdojasidjasoofu`])
             .expect(200)
@@ -96,7 +98,7 @@ describe('GET /stat/:_userId', () => {
 
     it('should return a 401', (done) => {
 
-        request(app)
+        request(_app)
             .get('/stat/${testID}')
             .expect(401)
             .expect((res) => {
@@ -104,52 +106,14 @@ describe('GET /stat/:_userId', () => {
             })
             .end(done);
     });
-});
-
-
-describe('PATCH /scores/:_userId', () => {
-
-    it('should add to user\'s  score.scores', (done) => {
-
-        request(app)
-            .patch(`/scores/${testID}`)
-            .set('Cookie', [`token=asdojasidjasoofu`])
-            .send({ '_userId': testID, 'score': 3000 })
-            .expect(200)
-            .expect((res) => {
-                expect(res.body.newscore._userId).toBe(testID.toHexString());
-            })
-            .end((err) => {
-                if (err) {
-                    return done(err);
-                }
-                Score.findOne({ '_userId': testID }).then((score) => {
-                    expect(score.scores.length).toBe(1);
-                    expect(score.scores[0]).toEqual(3000);
-                    expect
-                    return done();
-                }).catch((e) => done(e));
-            });
-    });
-
-    it('should return a 401', (done) => {
-
-        request(app)
-            .patch(`/scores/${testID}`)
-            .expect(401)
-            .expect((res) => {
-                expect(res.body).toEqual({});
-            })
-            .end(done);
-    });
-});
-
+});*/
+/*
 describe('PATCH /stat/:_userId', () => {
 
     it('should update user\'s stats', (done) => {
         var statObj = new Stat();
         statObj.totalSkullCount = 10;
-        request(app)
+        request(_app)
             .patch(`/stats/${testID}`)
             .set('Cookie', [`token=asdojasidjasoofu`])
             .send({ 'statObj': statObj })
@@ -170,7 +134,7 @@ describe('PATCH /stat/:_userId', () => {
 
     it('should return a 401', (done) => {
 
-        request(app)
+        request(_app)
             .patch(`/stats/${testID}`)
             .expect(401)
             .expect((res) => {
@@ -184,7 +148,7 @@ describe('POST /saveUserToDb', () => {
 
     it('should create a new stat entry in the db', (done) => {
 
-        request(app)
+        request(_app)
             .post(`/saveUserToDb`)
             .send({ '_userId': new ObjectID() })
             .expect(200)
@@ -201,7 +165,7 @@ describe('POST /saveUserToDb', () => {
 
     it('should create a new score entry in the db', (done) => {
 
-        request(app)
+        request(_app)
             .post(`/saveUserToDb`)
             .send({ '_userId': new ObjectID() })
             .expect(200)
@@ -215,37 +179,4 @@ describe('POST /saveUserToDb', () => {
                 }).catch((e) => done(e));
             });
     });
-
-});
-
-describe('POST /addUser and /removeUser', () => {
-
-    it('should add user to the cache', (done) => {
-        var token = "asdjaskdkaoskdopas";
-        var id = new ObjectID();
-        request(app)
-            .post(`/addUser`)
-            .send({ token, id })
-            .expect(200)
-            .expect((res) => {
-                expect(res.body.token).toBe(token);
-                expect(res.body.id._userId).toBe(id.toHexString());
-            })
-            .end(done);
-    });
-
-    it('should remove user from the cache', (done) => {
-            var token = "asdjaskdkaoskdopas";
-            var id = new ObjectID();
-
-            request(app)
-                .post('/removeUser')
-                .send({ token })
-                .expect(200)
-                .expect((res) => {
-                    expect(res.body.token).toBe(token);
-                    expect(res.body.id).toBe(undefined);
-                })
-                .end(done);
-    });
-});
+});*/

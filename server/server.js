@@ -13,12 +13,14 @@ var { mongoose } = require('./db/mongoose');
 var { Stat } = require('./db/models/stat');
 var { Score, ScoreSchema } = require('./db/models/score');
 var { compareNumbers } = require('./utils/utils');
+
+var { auth } = require('./auth/authentication');
 /*
 const populateSweden = (done) => {
     mongoose.model("TestCountry", ScoreSchema, "TestCountry");
     mongoose.model("TestCountry").remove({}).then(() => {
         var data = [];
-        for (var i = 1; i < 58; i++) {
+        for (var i = 1; i < 58; i++) {  
 
             var user = mongoose.model("TestCountry", ScoreSchema, "TestCountry")();
             user._userId = new ObjectID();
@@ -65,21 +67,6 @@ app.use(function (req, res, next) {
     next();
 });
 
-var auth = (req, res, next) => {
-
-    var token = req.cookies.token || req.body.token || req.header('token');
-
-    axios.post(process.env.AUTH_API_URL + '/authenticate', {
-        token
-    }).then((response) => {
-        req.StatusCode = response.status;
-        next();
-    }).catch(function (error) {
-        console.log(error.message);
-        req.StatusCode = error.response.status;
-        next();
-    });
-};
 
 app.get('/ping', (req, res) => {
     res.send("stat service is up and running");
@@ -153,13 +140,13 @@ app.get('/global_rankings/:offset', auth, (req, res) => {
             var data = [];
 
             scores.forEach(element => {
-                var obj = {}
+                var obj = {};
                 obj.username = element.username;
                 obj.score = element.score;
                 obj.country = element.country;
                 data.push(obj);
 
-            })
+            });
 
             res.send({ data });
         }).catch((err) => { console.log(err); });
@@ -177,11 +164,11 @@ app.get('/local_rankings/:country/:offset', auth, (req, res) => {
             var data = [];
 
             scores.forEach(element => {
-                var obj = {}
+                var obj = {};
                 obj.username = element.username;
                 obj.score = element.score;
                 data.push(obj);
-            })
+            });
 
             res.send({ data });
         }).catch((err) => { console.log(err); });
@@ -335,7 +322,7 @@ app.post('/stats/:_userId', auth, (req, res) => {
         var id = req.params._userId;
         var body = _.pick(req.body, ['statObj']);
         var obj = JSON.parse(body.statObj);
-         body.statObj = obj;
+        body.statObj = obj;
         if (!ObjectID.isValid(req.params._userId)) {
             return res.status(400).send("ID is invalid");
         }
@@ -388,7 +375,6 @@ app.post('/stats/:_userId', auth, (req, res) => {
 //update scores table 
 function updateScores(_userId, newscore, country, username) {
 
-    // if(mongoose.modelNames
     mongoose.connection.db.listCollections({ name: country })
         .next(function (err, collinfo) {
             if (err) {

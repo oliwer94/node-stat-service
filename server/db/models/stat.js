@@ -1,3 +1,4 @@
+/*jshint esversion: 6 */
 var mongoose = require('mongoose');
 const {ObjectID} = require('mongodb');
 
